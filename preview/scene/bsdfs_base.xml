@@ -1,0 +1,21 @@
+<scene version="2.0.0">
+    <bsdf type="diffuse" id="table_mat">
+        <ref id="table_mat::mts2CheckerText::1" name="reflectance"/>
+    </bsdf>
+    <bsdf type="diffuse" id="light_mat">
+        <rgb name="reflectance" value="0.800000011920929, 0.800000011920929, 0.800000011920929"/>
+    </bsdf>
+    <bsdf type="diffuse" id="light_mat2">
+        <rgb name="reflectance" value="0.800000011920929, 0.800000011920929, 0.800000011920929"/>
+    </bsdf>
+    <bsdf type="diffuse" id="inner_mat">
+        <rgb name="reflectance" value="0.800000011920929, 0.800000011920929, 0.800000011920929"/>
+    </bsdf>
+    <texture type="checkerboard" id="table_mat::mts2CheckerText::1">
+        <rgb name="color0" value="0.33000001311302185, 0.33000001311302185, 0.33000001311302185"/>
+        <rgb name="color1" value="0.20000000298023224, 0.20000000298023224, 0.20000000298023224"/>
+        <transform name="to_uv">
+            <scale x="10.0" y="10.0"/>
+        </transform>
+    </texture>
+</scene>

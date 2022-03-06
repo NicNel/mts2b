@@ -1,0 +1,24 @@
+<scene version="2.0.0" emitter="None">
+    <integrator type="path">
+        <integer name="max_depth" value="-1"/>
+    </integrator>
+    <sensor type="perspective">
+        <string name="fov_axis" value="smaller"/>
+        <float name="near_clip" value="0.1"/>
+        <float name="far_clip" value="1000.0"/>
+        <float name="fov" value="$fovPar"/>
+        <transform name="to_world">
+            <lookat origin="-7.000000, 0.000000, 1.000000" target="-6.000000, -0.000000, 1.000000" up="-0.000000, 0.000000, 1.000000"/>
+        </transform>
+        <sampler type="multijitter">
+            <integer name="sample_count" value="$sppPar"/>
+        </sampler>
+        <film type="hdrfilm">
+            <integer name="width" value="$resXPar"/>
+            <integer name="height" value="$resYPar"/>
+            <string name="pixel_format" value="rgb"/>
+            <string name="component_format" value="float32"/>
+            <rfilter type="box"/>
+        </film>
+    </sensor>
+</scene>
