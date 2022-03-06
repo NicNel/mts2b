@@ -2,4 +2,4 @@
 ## Mitsuba2 exporter/render engine for Blender
 (tested in Blender 2.8)
 
-![mts2_logo](https://user-images.githubusercontent.com/100981393/156904032-291ade46-ef7f-4147-82f0-7964cf8bdaea.jpeg)
+![mts2_mat_preview](https://user-images.githubusercontent.com/100981393/156905323-f78822dd-ed5f-4312-818e-1423c0792f7d.png)
