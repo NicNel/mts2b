@@ -1,5 +1,5 @@
 # mts2blender for Windows
-## Mitsuba2 exporter/render engine add-on for Blender
+## Mitsuba2 exporter/render engine add-on for Blender (WIP)
 (tested in Blender 2.9)
 ![Header Render](images/mts2_mat_preview.png)
 ### How to use
