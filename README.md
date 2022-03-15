@@ -2,7 +2,7 @@
 ## Mitsuba2 exporter/render engine add-on for Blender
 (tested in Blender 2.9)
 ![Header Render](images/mts2_mat_preview.png)
-###How to use
+### How to use
 - set mitsuba2 bin folder
 - set project (where to export) folder
 - hit render
