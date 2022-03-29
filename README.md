@@ -1,4 +1,4 @@
-# mts2blender for Windows
+# mts2blender for Windows (Early Release)
 ## Mitsuba2 exporter/render engine for Blender
 (tested in Blender 2.8)
 
