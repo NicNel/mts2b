@@ -31,6 +31,12 @@ class MTS2enderEngine(bpy.types.RenderEngine):
         else:
             self.FinalRender(depsgraph)
     
+    def LoadRenderResult(self, file, sx, sy):
+        result = self.begin_result(0, 0, sx, sy)
+        layer = result.layers[0]
+        layer.load_from_file(file)
+        self.end_result(result)
+        
     def PreviewRender(self, depsgraph):
         scene = depsgraph.scene
         scale = scene.render.resolution_percentage / 100.0
@@ -96,6 +102,9 @@ class MTS2enderEngine(bpy.types.RenderEngine):
             with open(geometry, 'w') as f:
                 f.write(g_data)
                 f.close()
+                
+            p["size_x"] = size_x
+            p["size_y"] = size_y
             self.RunPreviewRender(depsgraph, p)
         
     def FinalRender(self, depsgraph):
@@ -228,6 +237,8 @@ class MTS2enderEngine(bpy.types.RenderEngine):
         film_dict["string"].append({"name":"component_format", "value":p["component_format"]})
         #data = dict2xml(film_dict, 'integrator', "")
         
+        p["size_x"] = sx
+        p["size_y"] = sy
         
         if use_border:
             min_x = int(Lerp(0, sx, render.border_min_x))
@@ -348,9 +359,9 @@ class MTS2enderEngine(bpy.types.RenderEngine):
                 albedo = switchpath(p["project_dir"])+'/'+'{}.{}'.format("pass_1",ext)
                 normal = switchpath(p["project_dir"])+'/'+'{}.{}'.format("pass_2",ext)
                 self.denoiseOIDN(p, beauty, albedo, normal, p['denoised_file'])
-            self.loadResult(p['denoised_file'])
+            self.loadResult(p['denoised_file'], p)
         else:
-            self.loadResult(p['rendered_file'])
+            self.loadResult(p['rendered_file'], p)
     
     def RunPreviewRender(self, depsgraph, p):
         # Compute pbrt executable path
@@ -362,8 +373,9 @@ class MTS2enderEngine(bpy.types.RenderEngine):
         else:
             cmd = [ mts2BinFile, '-m', 'scalar_spectral', sceneFile ]
         runCmd(cmd)
-        result = self.get_result()
-        result.layers[0].load_from_file(p['rendered_preview_file'])
+        #result = self.get_result()
+        #result.layers[0].load_from_file(p['rendered_preview_file'])
+        self.LoadRenderResult(p['rendered_preview_file'], p["size_x"], p["size_y"])
         
     def denoiseOptix(self, p):
         imgtoolPath = p["mts2ImgtoolFile"]
@@ -387,7 +399,8 @@ class MTS2enderEngine(bpy.types.RenderEngine):
         cmd = [ imgtoolPath, "convert", denoisedPfm, "--outfile", result]
         runCmd(cmd)
     
-    def loadResult(self, file):
+    def loadResult(self, file, p):
         outImagePath = file
-        result = self.get_result()
-        result.layers[0].load_from_file(outImagePath)
+        #result = self.get_result()
+        #result.layers[0].load_from_file(outImagePath)
+        self.LoadRenderResult(outImagePath, p["size_x"], p["size_y"])
