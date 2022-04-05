@@ -13,7 +13,7 @@ class MTS2WorldProps(bpy.types.PropertyGroup):
                                                default=1.0)
     mts2_world_rotation : bpy.props.FloatVectorProperty(name="mts2_world_rotation", 
                                                 description="rotation",
-                                                default=(0.0, 0.0, 0.0),
+                                                default=(90.0, 0.0, 0.0),
                                                 subtype='EULER', 
                                                 size=3)
     mts2_world_show_preview: bpy.props.BoolProperty(name="mts2_world_show_preview", default=False, description="Show thumbnail")
