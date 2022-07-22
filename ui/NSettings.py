@@ -40,6 +40,7 @@ node_categories = [
         NodeItem("mts2Diffuse"),
         NodeItem("mts2DiffTrans"),
         NodeItem("mts2Plastic"),
+        NodeItem("mts2Principled"),
         NodeItem("mts2Dielectric"),
         NodeItem("mts2Conductor"),
         NodeItem("mts2Blend"),
@@ -57,7 +58,8 @@ node_categories = [
         NodeItem("mts2CheckerText"),
         NodeItem("mts2MixText"),
         NodeItem("mts2Fresnel"),
-        NodeItem("mts2ScaleText")
+        NodeItem("mts2ScaleText"),
+        NodeItem("mts2HSVText")
         ]),
     MTS2NodeCategory("MTS2_UTILS", "MTS2 Utils", items=[
         NodeItem("mts2Transform"),
@@ -322,12 +324,229 @@ class mts2Plastic(Node, MTS2TreeNode):
                 c = rough.default_value
                 bsdf_dict["float"].append({"name":"alpha", "value":c})
             else:
-                node_link = roughness.links[0]
+                node_link = rough.links[0]
                 curNode =  node_link.from_node
                 nd = curNode.Backprop(list, data)
-                #res+='  "texture roughness" ["{}"]\n'.format(nd.label)
+                text_id = nd.label
+                bsdf_dict["ref"].append({"id":text_id, "name":"alpha"})
             bsdf_dict["boolean"].append({"name":"sample_visible", "value":self.Sample_visible})
             
+        data["bsdf"].append(bsdf_dict)
+        return self
+        
+class mts2Principled(Node, MTS2TreeNode):
+    '''A custom node'''
+    bl_idname = 'mts2Principled'
+    bl_label = 'principled'
+    bl_icon = 'MATERIAL'
+
+    Eta : bpy.props.FloatProperty(default=1.5, min=1.0, max=999.0)
+    Specular : bpy.props.FloatProperty(default=0.5, min=0.0)
+    Ior_type: bpy.props.EnumProperty(name="Ior_type",
+                                              description="IOR type",
+                                              items=[
+                                              ("eta", "eta", "eta"),
+                                              ("specular", "specular", "specular")
+                                              ],
+                                              default='eta')
+    
+    Diffuse_reflectance_sampling_rate : bpy.props.FloatProperty(default=1.0, min=0.0)
+    Main_specular_sampling_rate : bpy.props.FloatProperty(default=1.0, min=0.0)
+    Clearcoat_sampling_rate : bpy.props.FloatProperty(default=0.0, min=0.0)
+    
+    def init(self, context):
+        self.outputs.new('NodeSocketShader', "BSDF")
+        
+        base_color = self.inputs.new('NodeSocketColor', "base color")
+        base_color.default_value = [0.8, 0.8, 0.8, 1.0]
+        
+        roughness_node = self.inputs.new('NodeSocketFloat', "roughness")
+        roughness_node.default_value = 0.5
+        
+        anisotropic_node = self.inputs.new('NodeSocketFloat', "anisotropic")
+        anisotropic_node.default_value = 0.0
+        
+        metallic_node = self.inputs.new('NodeSocketFloat', "metallic")
+        metallic_node.default_value = 0.0
+        
+        spec_trans_node = self.inputs.new('NodeSocketFloat', "spec trans")
+        spec_trans_node.default_value = 0.0
+        
+        spec_tint_node = self.inputs.new('NodeSocketFloat', "spec tint")
+        spec_tint_node.default_value = 0.0
+        
+        sheen_node = self.inputs.new('NodeSocketFloat', "sheen")
+        sheen_node.default_value = 0.0
+        
+        sheen_tint_node = self.inputs.new('NodeSocketFloat', "sheen tint")
+        sheen_tint_node.default_value = 0.0
+        
+        flatness_node = self.inputs.new('NodeSocketFloat', "flatness")
+        flatness_node.default_value = 0.0
+        
+        clearcoat_node = self.inputs.new('NodeSocketFloat', "clearcoat")
+        clearcoat_node.default_value = 0.0
+        
+        clearcoat_gloss_node = self.inputs.new('NodeSocketFloat', "clearcoat gloss")
+        clearcoat_gloss_node.default_value = 0.0
+        
+    def draw_buttons(self, context, layout):
+        layout.prop(self, "Ior_type",text = 'IOR type')
+        if self.Ior_type == "eta":
+            layout.prop(self, "Eta",text = 'eta')
+        else:
+            layout.prop(self, "Specular",text = 'specular')
+        
+        subcol = layout.column(align=True, heading = "sampling:")
+        subcol.emboss = 'PULLDOWN_MENU'
+        subcol.prop(self, "Diffuse_reflectance_sampling_rate", index=0, text="diffuse rate")
+        subcol.prop(self, "Main_specular_sampling_rate", index=1, text="specular rate")
+        subcol.prop(self, "Clearcoat_sampling_rate", index=2, text="clearcoat rate")
+        
+    def draw_label(self):
+        return self.bl_label
+        
+    def to_dict(self, list, data):
+        name = self.label
+        
+        color = self.inputs[0]
+        rough = self.inputs[1]
+        anisotropic = self.inputs[2]
+        metallic = self.inputs[3]
+        spec_trans = self.inputs[4]
+        spec_tint = self.inputs[5]
+        sheen = self.inputs[6]
+        sheen_tint = self.inputs[7]
+        flatness = self.inputs[8]
+        clearcoat = self.inputs[9]
+        clearcoat_gloss = self.inputs[10]
+        
+        bsdf_dict = {}
+        bsdf_dict["type"] = "principled"
+        bsdf_dict["id"] = name
+        bsdf_dict["float"] = []
+        bsdf_dict["rgb"] = []
+        bsdf_dict["ref"] = []
+         
+        #export colors
+        if not(color.is_linked):
+            c = color.default_value
+            bsdf_dict["rgb"].append({"name":"base_color", "value":"{}, {}, {}".format(c[0],c[1],c[2])})
+        else:
+            node_link = color.links[0]
+            curNode =  node_link.from_node
+            nd = curNode.Backprop(list, data)
+            text_id = nd.label
+            bsdf_dict["ref"].append({"id":text_id, "name":"base_color"})
+        #export roughness
+        if not(rough.is_linked):
+            c = rough.default_value
+            bsdf_dict["float"].append({"name":"roughness", "value":c})
+        else:
+            node_link = rough.links[0]
+            curNode =  node_link.from_node
+            nd = curNode.Backprop(list, data)
+            text_id = nd.label
+            bsdf_dict["ref"].append({"id":text_id, "name":"roughness"})
+        #export anisotropic
+        if not(anisotropic.is_linked):
+            c = anisotropic.default_value
+            bsdf_dict["float"].append({"name":"anisotropic", "value":c})
+        else:
+            node_link = anisotropic.links[0]
+            curNode =  node_link.from_node
+            nd = curNode.Backprop(list, data)
+            text_id = nd.label
+            bsdf_dict["ref"].append({"id":text_id, "name":"anisotropic"})
+        #export metallic
+        if not(metallic.is_linked):
+            c = metallic.default_value
+            bsdf_dict["float"].append({"name":"metallic", "value":c})
+        else:
+            node_link = metallic.links[0]
+            curNode =  node_link.from_node
+            nd = curNode.Backprop(list, data)
+            text_id = nd.label
+            bsdf_dict["ref"].append({"id":text_id, "name":"metallic"})
+        #export spec_trans
+        if not(spec_trans.is_linked):
+            c = spec_trans.default_value
+            bsdf_dict["float"].append({"name":"spec_trans", "value":c})
+        else:
+            node_link = spec_trans.links[0]
+            curNode =  node_link.from_node
+            nd = curNode.Backprop(list, data)
+            text_id = nd.label
+            bsdf_dict["ref"].append({"id":text_id, "name":"spec_trans"})
+        #export spec_tint
+        if not(spec_tint.is_linked):
+            c = spec_tint.default_value
+            bsdf_dict["float"].append({"name":"spec_tint", "value":c})
+        else:
+            node_link = spec_tint.links[0]
+            curNode =  node_link.from_node
+            nd = curNode.Backprop(list, data)
+            text_id = nd.label
+            bsdf_dict["ref"].append({"id":text_id, "name":"spec_tint"})
+        #export sheen
+        if not(sheen.is_linked):
+            c = sheen.default_value
+            bsdf_dict["float"].append({"name":"sheen", "value":c})
+        else:
+            node_link = sheen.links[0]
+            curNode =  node_link.from_node
+            nd = curNode.Backprop(list, data)
+            text_id = nd.label
+            bsdf_dict["ref"].append({"id":text_id, "name":"sheen"})
+        #export sheen_tint
+        if not(sheen_tint.is_linked):
+            c = sheen_tint.default_value
+            bsdf_dict["float"].append({"name":"sheen_tint", "value":c})
+        else:
+            node_link = sheen_tint.links[0]
+            curNode =  node_link.from_node
+            nd = curNode.Backprop(list, data)
+            text_id = nd.label
+            bsdf_dict["ref"].append({"id":text_id, "name":"sheen_tint"})
+        #export flatness
+        if not(flatness.is_linked):
+            c = flatness.default_value
+            bsdf_dict["float"].append({"name":"flatness", "value":c})
+        else:
+            node_link = flatness.links[0]
+            curNode =  node_link.from_node
+            nd = curNode.Backprop(list, data)
+            text_id = nd.label
+            bsdf_dict["ref"].append({"id":text_id, "name":"flatness"})
+        #export clearcoat
+        if not(clearcoat.is_linked):
+            c = clearcoat.default_value
+            bsdf_dict["float"].append({"name":"clearcoat", "value":c})
+        else:
+            node_link = clearcoat.links[0]
+            curNode =  node_link.from_node
+            nd = curNode.Backprop(list, data)
+            text_id = nd.label
+            bsdf_dict["ref"].append({"id":text_id, "name":"clearcoat"})
+        #export clearcoat_gloss
+        if not(clearcoat_gloss.is_linked):
+            c = clearcoat_gloss.default_value
+            bsdf_dict["float"].append({"name":"clearcoat_gloss", "value":c})
+        else:
+            node_link = clearcoat_gloss.links[0]
+            curNode =  node_link.from_node
+            nd = curNode.Backprop(list, data)
+            text_id = nd.label
+            bsdf_dict["ref"].append({"id":text_id, "name":"clearcoat_gloss"})
+            
+        if self.Ior_type == "eta":        
+            bsdf_dict["float"].append({"name":"eta", "value":self.Eta})
+        else:
+            bsdf_dict["float"].append({"name":"specular", "value":self.Specular})
+        
+        bsdf_dict["float"].append({"name":"diffuse_reflectance_sampling_rate", "value":self.Diffuse_reflectance_sampling_rate})
+        bsdf_dict["float"].append({"name":"main_specular_sampling_rate", "value":self.Main_specular_sampling_rate})
+        bsdf_dict["float"].append({"name":"clearcoat_sampling_rate", "value":self.Clearcoat_sampling_rate})
         data["bsdf"].append(bsdf_dict)
         return self
         
@@ -584,6 +803,7 @@ class mts2Twosided(Node, MTS2TreeNode):
         bsdf_dict["ref"] = []
          
         #mat1
+        mat1FinalName = "None"
         if not(mat1.is_linked):
             mat1FinalName = "None"
         else:
@@ -594,7 +814,8 @@ class mts2Twosided(Node, MTS2TreeNode):
             bsdf_dict["ref"].append({"id":mat1FinalName})
         #mat2
         if not(mat2.is_linked):
-            mat2FinalName = "None"
+            bsdf_dict["ref"].append({"id":mat1FinalName})
+            #mat2FinalName = "None"
         else:
             node_link = mat2.links[0]
             curNode =  node_link.from_node
@@ -928,7 +1149,72 @@ class mts2ScaleText(Node, MTS2TreeNode):
         
         data["texture"].append(text_dict)
         return self
+
+class mts2HSVText(Node, MTS2TreeNode):
+    '''A custom node'''
+    bl_idname = 'mts2HSVText'
+    bl_label = 'hsv'
+    bl_icon = 'TEXTURE'
+    
+    Scale : bpy.props.FloatProperty(default=1)
+    Gamma : bpy.props.FloatProperty(default=1)
+    Hue : bpy.props.FloatProperty(default=1)
+    Saturation : bpy.props.FloatProperty(default=1)
+    Value : bpy.props.FloatProperty(default=1)
+    Invert: bpy.props.BoolProperty(default=False)
+   
+    def init(self, context):
+        self.outputs.new('NodeSocketColor', "hsv")
+        text = self.inputs.new('NodeSocketColor', "Texture")
+        text.default_value = [0.8, 0.8, 0.8, 1.0]
+
+    def draw_buttons(self, context, layout):
+        layout.prop(self, "Hue",text = 'hue')
+        layout.prop(self, "Saturation",text = 'saturation')
+        layout.prop(self, "Value",text = 'value')
+        layout.prop(self, "Scale",text = 'scale')
+        layout.prop(self, "Gamma",text = 'gamma')
+        layout.prop(self, "Invert",text = 'invert')
         
+    def draw_label(self):
+        return self.bl_label
+    
+    def to_dict(self, list, data):
+        name = self.label
+        
+        text = self.inputs[0]
+        
+        text_dict = {}
+        text_dict["type"] = "hsv"
+        text_dict["id"] = name
+        
+        text_dict["float"] = []
+        text_dict["ref"] = []
+        text_dict["rgb"] = []
+        text_dict["boolean"] = []
+        
+        text_dict["float"].append({"name":"scale", "value":self.Scale})
+        text_dict["float"].append({"name":"gamma", "value":self.Gamma})
+        text_dict["float"].append({"name":"hue", "value":self.Hue})
+        text_dict["float"].append({"name":"saturation", "value":self.Saturation})
+        text_dict["float"].append({"name":"value", "value":self.Value})
+        
+        text_dict["boolean"].append({"name":"invert", "value":self.Invert})
+        
+        #transmittance
+        if not(text.is_linked):
+            c = text.default_value
+            text_dict["rgb"].append({"name":"texture", "value":"{}, {}, {}".format(c[0],c[1],c[2])})
+        else:
+            node_link = text.links[0]
+            curNode =  node_link.from_node
+            nd = curNode.Backprop(list, data)
+            text_id = nd.label
+            text_dict["ref"].append({"id":text_id, "name":"texture"})
+        
+        data["texture"].append(text_dict)
+        return self        
+
 class mts2MixText(Node, MTS2TreeNode):
     '''A custom node'''
     bl_idname = 'mts2MixText'
@@ -1157,6 +1443,8 @@ class mts2Transform(Node, MTS2TreeNode):
         uv_dict = {}
         uv_dict["name"] = "to_uv"
         uv_dict["scale"] = {"x":self.UValue, "y":self.VValue}
+        uv_dict["translate"] = {"x":self.UDelta, "y":self.VDelta}
+        
         return uv_dict
         
 class mts2AreaEmitter(Node, MTS2TreeNode):
@@ -1239,6 +1527,9 @@ def register():
     bpy.utils.register_class(mts2Transform)
     bpy.utils.register_class(mts2AreaEmitter)
     bpy.utils.register_class(mts2Fresnel)
+    bpy.utils.register_class(mts2Principled)
+    
+    bpy.utils.register_class(mts2HSVText)
     
     nodeitems_utils.register_node_categories("MTS2_NODES", node_categories)
 
@@ -1261,4 +1552,8 @@ def unregister():
     bpy.utils.unregister_class(mts2Transform)
     bpy.utils.unregister_class(mts2AreaEmitter)
     bpy.utils.unregister_class(mts2Fresnel)
+    bpy.utils.unregister_class(mts2Principled)
+    
+    bpy.utils.unregister_class(mts2HSVText)
+    
     nodeitems_utils.unregister_node_categories("MTS2_NODES")
